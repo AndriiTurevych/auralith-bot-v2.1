@@ -9,6 +9,15 @@ from .company_context import load_company_context
 
 MAX_TOKENS = 2048
 DEFAULT_DEBATE_ROUNDS = 2
+DEFAULT_PANEL_SIZE = 6
+
+_ROUTER_PROMPT = (
+    "You are a routing assistant for an executive board, not an executive yourself. Given a "
+    "topic and a directory of available executives (key: title — domain), return ONLY a "
+    "comma-separated list of the keys for the executives genuinely relevant to this topic. "
+    "Pick as few as truly fit, never more than {max_members}. No prose, no explanation — just "
+    "the keys."
+)
 
 
 class Orchestrator:
@@ -18,22 +27,33 @@ class Orchestrator:
         model: str,
         context_path: str | None = None,
         log_path: str | None = None,
+        panel_size: int = DEFAULT_PANEL_SIZE,
     ):
         self._client = client
         self._model = model
         self._context_path = context_path
         self._log_path = log_path
+        self._panel_size = panel_size
 
     def company_context(self) -> str:
         return load_company_context(self._context_path)
 
-    async def ask(self, agent: Agent, question: str, context: str = "") -> str:
+    async def ask(
+        self,
+        agent: Agent,
+        question: str,
+        context: str = "",
+        history: list[tuple[str, str]] | None = None,
+    ) -> str:
         parts = []
         company_context = self.company_context()
         if company_context:
             parts.append(f"Company context:\n{company_context}")
         if context:
             parts.append(f"Additional context:\n{context}")
+        if history:
+            history_text = "\n\n".join(f"Q: {q}\nA: {a}" for q, a in history)
+            parts.append(f"Conversation so far:\n{history_text}")
         parts.append(f"Question:\n{question}")
         user_content = "\n\n".join(parts)
 
@@ -45,16 +65,37 @@ class Orchestrator:
         )
         return response.content[0].text
 
-    async def board_meeting(self, topic: str) -> dict[str, str]:
-        members = [agent for agent in AGENTS.values() if agent.key != CEO.key]
+    async def select_panel(self, topic: str, max_members: int | None = None) -> list[Agent]:
+        max_members = max_members or self._panel_size
+        candidates = [agent for agent in AGENTS.values() if agent.key != CEO.key]
+        directory = "\n".join(f"{agent.key}: {agent.title} — {agent.domain}" for agent in candidates)
+        router = Agent(key="_router", title="Router", domain="", system_prompt=_ROUTER_PROMPT.format(max_members=max_members))
+
+        response = await self.ask(router, f"Topic: {topic}\n\nAvailable executives:\n{directory}")
+        requested_keys = {key.strip().lower() for key in response.replace("\n", ",").split(",") if key.strip()}
+        selected = [agent for agent in candidates if agent.key in requested_keys]
+
+        return selected[:max_members] if selected else candidates
+
+    async def board_meeting(
+        self,
+        topic: str,
+        members: list[Agent] | None = None,
+        mode: str = "board_meeting",
+    ) -> dict[str, str]:
+        members = members if members is not None else [agent for agent in AGENTS.values() if agent.key != CEO.key]
         opinions = await asyncio.gather(*(self.ask(member, topic) for member in members))
         opinions_by_role = {member.title: opinion for member, opinion in zip(members, opinions)}
 
         decision = await self._synthesize(topic, opinions_by_role, debated=False)
         opinions_by_role["CEO (Final Decision)"] = decision
 
-        decision_log.record_decision(topic, opinions_by_role, mode="board_meeting", path=self._log_path)
+        decision_log.record_decision(topic, opinions_by_role, mode=mode, path=self._log_path)
         return opinions_by_role
+
+    async def smart_board_meeting(self, topic: str, max_members: int | None = None) -> dict[str, str]:
+        panel = await self.select_panel(topic, max_members=max_members)
+        return await self.board_meeting(topic, members=panel, mode="smart_board")
 
     async def board_debate(self, topic: str, rounds: int = DEFAULT_DEBATE_ROUNDS) -> dict[str, str]:
         members = [agent for agent in AGENTS.values() if agent.key != CEO.key]

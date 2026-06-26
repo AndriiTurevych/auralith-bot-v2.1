@@ -49,6 +49,24 @@ async def test_ask_returns_agent_text_and_uses_agent_system_prompt(log_path) -> 
 
 
 @pytest.mark.asyncio
+async def test_ask_includes_history_when_provided(log_path) -> None:
+    client = make_client()
+    orchestrator = make_orchestrator(client, log_path)
+
+    await orchestrator.ask(
+        AGENTS["cfo"],
+        "And next quarter?",
+        history=[("What's our runway?", "6 months at current burn.")],
+    )
+
+    _, kwargs = client.messages.create.call_args
+    content = kwargs["messages"][0]["content"]
+    assert "What's our runway?" in content
+    assert "6 months at current burn." in content
+    assert "And next quarter?" in content
+
+
+@pytest.mark.asyncio
 async def test_ask_includes_context_when_provided(log_path) -> None:
     client = make_client()
     orchestrator = make_orchestrator(client, log_path)
@@ -128,3 +146,76 @@ async def test_board_debate_single_round_skips_rebuttal(log_path) -> None:
     await orchestrator.board_debate("Should we cut marketing spend?", rounds=1)
 
     assert client.messages.create.await_count == len(non_ceo_members) + 1
+
+
+@pytest.mark.asyncio
+async def test_select_panel_returns_only_router_chosen_agents(log_path) -> None:
+    client = make_client(text="cfo, cto")
+    orchestrator = make_orchestrator(client, log_path)
+
+    panel = await orchestrator.select_panel("Should we adopt a new payment processor?")
+
+    assert {agent.key for agent in panel} == {"cfo", "cto"}
+
+
+@pytest.mark.asyncio
+async def test_select_panel_falls_back_to_all_when_router_response_unparseable(log_path) -> None:
+    client = make_client(text="I'm not confident, better ask everyone on this one.")
+    orchestrator = make_orchestrator(client, log_path)
+    non_ceo_members = [agent for agent in AGENTS.values() if agent.key != CEO.key]
+
+    panel = await orchestrator.select_panel("Should we raise prices?")
+
+    assert {agent.key for agent in panel} == {agent.key for agent in non_ceo_members}
+
+
+@pytest.mark.asyncio
+async def test_select_panel_caps_to_max_members(log_path) -> None:
+    client = make_client(text=",".join(AGENTS.keys()))
+    orchestrator = make_orchestrator(client, log_path)
+
+    panel = await orchestrator.select_panel("Should we raise prices?", max_members=3)
+
+    assert len(panel) == 3
+
+
+@pytest.mark.asyncio
+async def test_smart_board_meeting_only_asks_selected_panel_members(log_path) -> None:
+    client = AsyncMock()
+    client.messages.create = AsyncMock(
+        side_effect=[
+            SimpleNamespace(content=[SimpleNamespace(text="cfo, cto")]),
+            SimpleNamespace(content=[SimpleNamespace(text="cfo take")]),
+            SimpleNamespace(content=[SimpleNamespace(text="cto take")]),
+            SimpleNamespace(content=[SimpleNamespace(text="final decision")]),
+        ]
+    )
+    orchestrator = make_orchestrator(client, log_path)
+
+    result = await orchestrator.smart_board_meeting("Should we adopt a new payment processor?")
+
+    assert AGENTS["cfo"].title in result
+    assert AGENTS["cto"].title in result
+    assert AGENTS["coo"].title not in result
+    assert "CEO (Final Decision)" in result
+    assert client.messages.create.await_count == 4
+
+
+@pytest.mark.asyncio
+async def test_smart_board_meeting_logs_decision_with_smart_board_mode(log_path) -> None:
+    client = AsyncMock()
+    client.messages.create = AsyncMock(
+        side_effect=[
+            SimpleNamespace(content=[SimpleNamespace(text="cfo")]),
+            SimpleNamespace(content=[SimpleNamespace(text="cfo take")]),
+            SimpleNamespace(content=[SimpleNamespace(text="final decision")]),
+        ]
+    )
+    orchestrator = make_orchestrator(client, log_path)
+
+    await orchestrator.smart_board_meeting("Should we raise prices?")
+
+    with open(log_path, encoding="utf-8") as f:
+        entries = [json.loads(line) for line in f]
+    assert len(entries) == 1
+    assert entries[0]["mode"] == "smart_board"
