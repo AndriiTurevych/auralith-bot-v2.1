@@ -25,6 +25,9 @@ a final decision.
 | `/cro` | Chief Risk Officer | Enterprise risk, war/sanctions/FX risk, insurance |
 | `/scd` | Supply Chain Director | Logistics, customs, supplier networks |
 | `/procurement` | Procurement Specialist | Sourcing, vendor negotiation, procurement law |
+| `/export` | Export Sales Director | International distribution, export channels, route-to-market |
+| `/quality` | Quality Director | Product quality, lab testing, certification |
+| `/engineer` | Chief Engineer | Plant engineering, equipment reliability, capital construction |
 
 All agents default to Ukrainian and reason from Ukrainian legal, tax, and
 regulatory context (martial law, NBU currency controls, Prozorro public
@@ -73,7 +76,7 @@ file is gitignored — treat it as runtime data, not source.
 
 ## Architecture
 
-- `auralith/agents/` — `Agent` dataclass (`key`, `title`, `domain`, `system_prompt`) and the nine role definitions
+- `auralith/agents/` — `Agent` dataclass (`key`, `title`, `domain`, `system_prompt`) and the role definitions
 - `auralith/company_context.py` — loads `company_context.md` (or the configured path) as a string
 - `auralith/decision_log.py` — appends/reads board decisions as JSONL
 - `auralith/orchestrator.py` — `Orchestrator.ask()` for single-agent queries (auto-injects company context); `Orchestrator.board_meeting()` for parallel multi-agent consultation + CEO synthesis; `Orchestrator.board_debate()` for multi-round rebuttal before synthesis. Both meeting modes log to the decision log.
@@ -87,8 +90,8 @@ board meeting and debate.
 Tuning debate depth: `DEBATE_ROUNDS` (default `2` — one opening round plus
 one rebuttal round). Each extra round costs one more LLM call per executive.
 
-With 14 non-CEO members, `/board` makes 15 LLM calls and `/debate` (2 rounds)
-makes 29 — expect noticeably higher latency and API cost than asking one
+With 17 non-CEO members, `/board` makes 18 LLM calls and `/debate` (2 rounds)
+makes 35 — expect noticeably higher latency and API cost than asking one
 agent directly with `/ask`.
 
 ## Tests

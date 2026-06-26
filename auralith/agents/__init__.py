@@ -4,6 +4,7 @@ from .roles import (
     ANALYST,
     CEO,
     CFO,
+    CHIEF_ENGINEER,
     CHRO,
     CIO,
     CLO,
@@ -13,8 +14,10 @@ from .roles import (
     CRO,
     CTO,
     ENERGY_MANAGER,
+    EXPORT_DIRECTOR,
     PROCUREMENT_SPECIALIST,
     PRODUCTION_PLANNER,
+    QUALITY_DIRECTOR,
     SUPPLY_CHAIN_DIRECTOR,
 )
 
@@ -36,4 +39,7 @@ __all__ = [
     "CRO",
     "SUPPLY_CHAIN_DIRECTOR",
     "PROCUREMENT_SPECIALIST",
+    "EXPORT_DIRECTOR",
+    "QUALITY_DIRECTOR",
+    "CHIEF_ENGINEER",
 ]

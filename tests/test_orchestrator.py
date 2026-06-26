@@ -29,6 +29,7 @@ def test_agents_include_expanded_specialist_roles() -> None:
     expected_keys = {
         "ceo", "coo", "cfo", "cmo", "cto", "cio", "chro", "clo", "cpo",
         "analyst", "planner", "energy", "cro", "scd", "procurement",
+        "export", "quality", "engineer",
     }
     assert set(AGENTS) == expected_keys
 
