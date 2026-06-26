@@ -19,6 +19,17 @@ a final decision.
 | `/chro` | CHRO | People, hiring, org design, culture |
 | `/clo` | CLO | Legal risk, contracts, compliance |
 | `/cpo` | CPO | Product strategy, roadmap, UX |
+| `/analyst` | Chief Analytics Officer | Data analysis, reporting, forecasting |
+| `/planner` | Production Planning Director | Production scheduling, capacity, bottlenecks |
+| `/energy` | Energy Manager | Power supply, grid resilience, backup power |
+| `/cro` | Chief Risk Officer | Enterprise risk, war/sanctions/FX risk, insurance |
+| `/scd` | Supply Chain Director | Logistics, customs, supplier networks |
+| `/procurement` | Procurement Specialist | Sourcing, vendor negotiation, procurement law |
+
+All agents default to Ukrainian and reason from Ukrainian legal, tax, and
+regulatory context (martial law, NBU currency controls, Prozorro public
+procurement, customs, NEURC energy regulation, etc.) instead of generic
+Western assumptions. They reply in whatever language you write in.
 
 ## Setup
 
@@ -75,6 +86,10 @@ board meeting and debate.
 
 Tuning debate depth: `DEBATE_ROUNDS` (default `2` — one opening round plus
 one rebuttal round). Each extra round costs one more LLM call per executive.
+
+With 14 non-CEO members, `/board` makes 15 LLM calls and `/debate` (2 rounds)
+makes 29 — expect noticeably higher latency and API cost than asking one
+agent directly with `/ask`.
 
 ## Tests
 

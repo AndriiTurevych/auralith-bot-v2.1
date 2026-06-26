@@ -1,5 +1,22 @@
 from .base import Agent
-from .roles import AGENTS, CEO, CFO, CHRO, CIO, CLO, CMO, COO, CPO, CTO
+from .roles import (
+    AGENTS,
+    ANALYST,
+    CEO,
+    CFO,
+    CHRO,
+    CIO,
+    CLO,
+    CMO,
+    COO,
+    CPO,
+    CRO,
+    CTO,
+    ENERGY_MANAGER,
+    PROCUREMENT_SPECIALIST,
+    PRODUCTION_PLANNER,
+    SUPPLY_CHAIN_DIRECTOR,
+)
 
 __all__ = [
     "Agent",
@@ -13,4 +30,10 @@ __all__ = [
     "CHRO",
     "CLO",
     "CPO",
+    "ANALYST",
+    "PRODUCTION_PLANNER",
+    "ENERGY_MANAGER",
+    "CRO",
+    "SUPPLY_CHAIN_DIRECTOR",
+    "PROCUREMENT_SPECIALIST",
 ]

@@ -1,21 +1,27 @@
-# Company Context
+# Контекст компанії
 
-This file is automatically injected into every agent's prompt. Keep it
-short, factual, and current — agents will reason about whatever is written
-here as ground truth. Delete sections that don't apply.
+Цей файл автоматично підмішується в кожен запит до агента. Тримайте його
+коротким, фактичним і актуальним — агенти сприймають написане тут як факт.
+Видаліть розділи, що не стосуються вашого бізнесу.
 
-## Snapshot
-- Stage: (e.g. pre-seed / seed / Series A / profitable)
-- Product: (one sentence)
-- Headcount:
-- MRR/ARR:
-- Cash runway (months):
+## Стан компанії
+- Стадія: (напр. стартап / зростання / прибуткова)
+- Продукт: (одне речення)
+- Штат:
+- Виручка/MRR/ARR:
+- Запас грошей (місяців):
 
-## Current priorities
+## Виробництво та постачання
+- Локація виробництва:
+- Ключові постачальники:
+- Альтернативні логістичні маршрути (якщо основний недоступний):
+
+## Поточні пріоритети
 -
 
-## Recent results
+## Останні результати
 -
 
-## Known constraints
+## Відомі обмеження та ризики
+- Воєнний стан / можливі відключення електроенергії:
 -

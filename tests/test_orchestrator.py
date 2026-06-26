@@ -25,6 +25,14 @@ def log_path(tmp_path):
     return str(tmp_path / "decisions.log.jsonl")
 
 
+def test_agents_include_expanded_specialist_roles() -> None:
+    expected_keys = {
+        "ceo", "coo", "cfo", "cmo", "cto", "cio", "chro", "clo", "cpo",
+        "analyst", "planner", "energy", "cro", "scd", "procurement",
+    }
+    assert set(AGENTS) == expected_keys
+
+
 @pytest.mark.asyncio
 async def test_ask_returns_agent_text_and_uses_agent_system_prompt(log_path) -> None:
     client = make_client(text="hello from cfo")
