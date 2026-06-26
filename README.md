@@ -39,19 +39,42 @@ python -m auralith.main
 
 - `/ask <role> <question>` — get a single executive's perspective, e.g. `/ask cfo What's our runway?`
 - `/<role> <question>` — shortcut for the above, e.g. `/cto Should we migrate to microservices?`
-- `/board <topic>` — convene the full board: every executive gives their take, then the CEO synthesizes a final decision with next steps
+- `/board <topic>` — convene the full board: every executive gives their take in parallel, then the CEO synthesizes a final decision with next steps
+- `/debate <topic>` — like `/board`, but executives see each other's positions and get a rebuttal round before the CEO synthesizes (more API calls, sharper conflict)
+- `/context` — show the company context currently injected into every agent prompt
+- `/log` — show the last 5 logged board/debate decisions
 - `/roles` — list all available executives and their domains
+
+## Company context
+
+`company_context.md` (repo root) is automatically read and injected into
+every agent prompt — edit it with real metrics, stage, priorities, and
+constraints so advice is grounded instead of generic. Override the path with
+`COMPANY_CONTEXT_PATH`. If the file is missing, agents just get the question
+with no company context.
+
+## Decision log
+
+Every `/board` and `/debate` run is appended as a JSON line to
+`decisions.log.jsonl` (path override: `DECISION_LOG_PATH`) with a timestamp,
+mode, topic, every executive's position, and the CEO's final decision. This
+file is gitignored — treat it as runtime data, not source.
 
 ## Architecture
 
 - `auralith/agents/` — `Agent` dataclass (`key`, `title`, `domain`, `system_prompt`) and the nine role definitions
-- `auralith/orchestrator.py` — `Orchestrator.ask()` for single-agent queries, `Orchestrator.board_meeting()` for parallel multi-agent consultation + CEO synthesis
+- `auralith/company_context.py` — loads `company_context.md` (or the configured path) as a string
+- `auralith/decision_log.py` — appends/reads board decisions as JSONL
+- `auralith/orchestrator.py` — `Orchestrator.ask()` for single-agent queries (auto-injects company context); `Orchestrator.board_meeting()` for parallel multi-agent consultation + CEO synthesis; `Orchestrator.board_debate()` for multi-round rebuttal before synthesis. Both meeting modes log to the decision log.
 - `auralith/bot/telegram_bot.py` — aiogram `Dispatcher` wiring Telegram commands to the orchestrator
 - `auralith/main.py` — entry point; wires up the Anthropic client, orchestrator, and bot, then starts polling
 
 Adding a new role: define an `Agent` in `auralith/agents/roles.py` and add it
 to `AGENTS`. It automatically gets a `/<key>` Telegram command and joins the
-board meeting.
+board meeting and debate.
+
+Tuning debate depth: `DEBATE_ROUNDS` (default `2` — one opening round plus
+one rebuttal round). Each extra round costs one more LLM call per executive.
 
 ## Tests
 

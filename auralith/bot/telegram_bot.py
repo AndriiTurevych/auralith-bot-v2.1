@@ -2,6 +2,7 @@ from aiogram import Dispatcher
 from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
+from .. import decision_log
 from ..agents.base import Agent
 from ..agents.roles import AGENTS
 from ..orchestrator import Orchestrator
@@ -10,6 +11,9 @@ HELP_TEXT = (
     "Auralith C-Suite Bot\n\n"
     "/ask <role> <question> - get a perspective from one executive\n"
     "/board <question> - convene the full board and get a synthesized decision\n"
+    "/debate <question> - board debate: executives rebut each other before the CEO decides\n"
+    "/context - show the current company context fed to every agent\n"
+    "/log - show the last 5 board decisions\n"
     "/roles - list available executives\n"
     "/<role> <question> - shortcut, e.g. /cfo What's our runway?\n\n"
     "Available roles: " + ", ".join(sorted(AGENTS))
@@ -49,11 +53,40 @@ def build_dispatcher(orchestrator: Orchestrator) -> Dispatcher:
         for title, opinion in opinions.items():
             await message.answer(f"{title}:\n{opinion}")
 
+    async def handle_debate(message: Message) -> None:
+        args = (message.text or "").split(maxsplit=1)
+        if len(args) < 2:
+            await message.answer("Usage: /debate <topic>\nExample: /debate Should we cut the marketing budget?")
+            return
+        topic = args[1]
+        await message.answer("Opening the floor for debate...")
+        positions = await orchestrator.board_debate(topic)
+        for title, opinion in positions.items():
+            await message.answer(f"{title}:\n{opinion}")
+
+    async def handle_context(message: Message) -> None:
+        context = orchestrator.company_context()
+        await message.answer(context if context else "No company context file found.")
+
+    async def handle_log(message: Message) -> None:
+        entries = decision_log.list_decisions(limit=5)
+        if not entries:
+            await message.answer("No decisions logged yet.")
+            return
+        for entry in entries:
+            decision = entry["opinions"].get("CEO (Final Decision)", "")
+            await message.answer(
+                f"[{entry['timestamp']}] ({entry['mode']}) {entry['topic']}\n\nCEO decision:\n{decision}"
+            )
+
     dp.message.register(handle_start, CommandStart())
     dp.message.register(handle_start, Command("help"))
     dp.message.register(handle_roles, Command("roles"))
     dp.message.register(handle_ask, Command("ask"))
     dp.message.register(handle_board, Command("board"))
+    dp.message.register(handle_debate, Command("debate"))
+    dp.message.register(handle_context, Command("context"))
+    dp.message.register(handle_log, Command("log"))
 
     for key, agent in AGENTS.items():
         dp.message.register(_make_role_handler(orchestrator, agent), Command(key))

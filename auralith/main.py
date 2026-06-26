@@ -14,7 +14,12 @@ async def main() -> None:
     settings = load_settings()
 
     anthropic_client = AsyncAnthropic(api_key=settings.anthropic_api_key)
-    orchestrator = Orchestrator(anthropic_client, settings.model)
+    orchestrator = Orchestrator(
+        anthropic_client,
+        settings.model,
+        context_path=settings.company_context_path,
+        log_path=settings.decision_log_path,
+    )
 
     bot = Bot(token=settings.telegram_bot_token)
     dispatcher = build_dispatcher(orchestrator)
