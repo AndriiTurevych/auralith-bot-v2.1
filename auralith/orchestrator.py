@@ -5,7 +5,7 @@ from anthropic import AsyncAnthropic
 from .agents.base import Agent
 from .agents.roles import AGENTS, CEO
 
-MAX_TOKENS = 1024
+MAX_TOKENS = 2048
 
 
 class Orchestrator:
