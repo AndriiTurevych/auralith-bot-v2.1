@@ -8,31 +8,44 @@ a final decision.
 
 ## Roles
 
-| Command | Role | Domain |
-|---|---|---|
-| `/ceo` | CEO | Strategy, vision, resource allocation, final decisions |
-| `/coo` | COO | Operations, execution, delivery |
-| `/cfo` | CFO | Budget, cash flow, unit economics, financial risk |
-| `/cmo` | CMO | Marketing, brand, growth, acquisition |
-| `/cto` | CTO | Technology strategy, architecture, engineering |
-| `/cio` | CIO | Internal IT, infrastructure, data governance, security |
-| `/chro` | CHRO | People, hiring, org design, culture |
-| `/clo` | CLO | Legal risk, contracts, compliance |
-| `/cpo` | CPO | Product strategy, roadmap, UX |
-| `/analyst` | Chief Analytics Officer | Data analysis, reporting, forecasting |
-| `/planner` | Production Planning Director | Production scheduling, capacity, bottlenecks |
-| `/energy` | Energy Manager | Power supply, grid resilience, backup power |
-| `/cro` | Chief Risk Officer | Enterprise risk, war/sanctions/FX risk, insurance |
-| `/scd` | Supply Chain Director | Logistics, customs, supplier networks |
-| `/procurement` | Procurement Specialist | Sourcing, vendor negotiation, procurement law |
-| `/export` | Export Sales Director | International distribution, export channels, route-to-market |
-| `/quality` | Quality Director | Product quality, lab testing, certification |
-| `/engineer` | Chief Engineer | Plant engineering, equipment reliability, capital construction |
+| Command | Role | Domain | Web search |
+|---|---|---|---|
+| `/ceo` | CEO | Strategy, vision, resource allocation, final decisions | |
+| `/coo` | COO | Operations, execution, delivery | |
+| `/cfo` | CFO | Budget, cash flow, unit economics, financial risk | ✅ |
+| `/cmo` | CMO | Marketing, brand, growth, acquisition | ✅ |
+| `/cto` | CTO | Technology strategy, architecture, engineering | |
+| `/cio` | CIO | Internal IT, infrastructure, data governance, security | |
+| `/chro` | CHRO | People, hiring, org design, culture | |
+| `/clo` | CLO | Legal risk, contracts, compliance | ✅ |
+| `/cpo` | CPO | Product strategy, roadmap, UX | |
+| `/analyst` | Chief Analytics Officer | Data analysis, reporting, forecasting | ✅ |
+| `/planner` | Production Planning Director | Production scheduling, capacity, bottlenecks | |
+| `/energy` | Energy Manager | Power supply, grid resilience, backup power | ✅ |
+| `/cro` | Chief Risk Officer | Enterprise risk, war/sanctions/FX risk, insurance | ✅ |
+| `/scd` | Supply Chain Director | Logistics, customs, supplier networks | ✅ |
+| `/procurement` | Procurement Specialist | Sourcing, vendor negotiation, procurement law | ✅ |
+| `/export` | Export Sales Director | International distribution, export channels, route-to-market | ✅ |
+| `/quality` | Quality Director | Product quality, lab testing, certification | ✅ |
+| `/engineer` | Chief Engineer | Plant engineering, equipment reliability, capital construction | |
 
 All agents default to Ukrainian and reason from Ukrainian legal, tax, and
 regulatory context (martial law, NBU currency controls, Prozorro public
 procurement, customs, NEURC energy regulation, etc.) instead of generic
 Western assumptions. They reply in whatever language you write in.
+
+## Web search
+
+Roles whose advice depends on facts that go stale (FX rates, tariffs,
+sanctions lists, regulations, market/competitor news) get Claude's built-in
+web search tool, marked ✅ above. Anthropic runs the actual search
+server-side — Auralith just declares the tool on the request and the agent's
+system prompt instructs it to search before stating any time-sensitive
+number or claim, cross-check it against another source, and say plainly when
+something couldn't be verified instead of guessing. Other roles (CEO, COO,
+CTO, CIO, CHRO, CPO, Production Planning Director, Chief Engineer) reason
+from company context and domain expertise only — their calls are more about
+internal trade-offs than external facts, so they skip the extra round trip.
 
 ## Setup
 
@@ -87,11 +100,11 @@ in-process only (cleared on bot restart) and scoped per Telegram chat — use
 
 ## Architecture
 
-- `auralith/agents/` — `Agent` dataclass (`key`, `title`, `domain`, `system_prompt`) and the role definitions
+- `auralith/agents/` — `Agent` dataclass (`key`, `title`, `domain`, `system_prompt`, `web_search`) and the role definitions
 - `auralith/company_context.py` — loads `company_context.md` (or the configured path) as a string
 - `auralith/decision_log.py` — appends/reads board decisions as JSONL
 - `auralith/memory.py` — `ConversationMemory`, an in-process per-(chat, role) rolling history used to give `/ask` follow-ups context
-- `auralith/orchestrator.py` — `Orchestrator.ask()` for single-agent queries (auto-injects company context and optional conversation history); `Orchestrator.select_panel()` asks a lightweight router call to pick the executives relevant to a topic; `Orchestrator.smart_board_meeting()` runs `board_meeting()` against that router-selected panel; `Orchestrator.board_meeting()` runs the full (or a given) set of agents in parallel + CEO synthesis; `Orchestrator.board_debate()` is multi-round rebuttal before synthesis. All meeting modes log to the decision log.
+- `auralith/orchestrator.py` — `Orchestrator.ask()` for single-agent queries (auto-injects company context and optional conversation history; attaches Claude's web search tool when `agent.web_search` is set); `Orchestrator.select_panel()` asks a lightweight router call to pick the executives relevant to a topic; `Orchestrator.smart_board_meeting()` runs `board_meeting()` against that router-selected panel; `Orchestrator.board_meeting()` runs the full (or a given) set of agents in parallel + CEO synthesis; `Orchestrator.board_debate()` is multi-round rebuttal before synthesis. All meeting modes log to the decision log.
 - `auralith/bot/telegram_bot.py` — aiogram `Dispatcher` wiring Telegram commands to the orchestrator
 - `auralith/main.py` — entry point; wires up the Anthropic client, orchestrator, conversation memory, and bot, then starts polling
 

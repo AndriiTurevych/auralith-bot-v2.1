@@ -10,6 +10,7 @@ from .company_context import load_company_context
 MAX_TOKENS = 2048
 DEFAULT_DEBATE_ROUNDS = 2
 DEFAULT_PANEL_SIZE = 6
+WEB_SEARCH_TOOL = {"type": "web_search_20250305", "name": "web_search"}
 
 _ROUTER_PROMPT = (
     "You are a routing assistant for an executive board, not an executive yourself. Given a "
@@ -57,13 +58,17 @@ class Orchestrator:
         parts.append(f"Question:\n{question}")
         user_content = "\n\n".join(parts)
 
-        response = await self._client.messages.create(
+        kwargs = dict(
             model=self._model,
             max_tokens=MAX_TOKENS,
             system=agent.system_prompt,
             messages=[{"role": "user", "content": user_content}],
         )
-        return response.content[0].text
+        if agent.web_search:
+            kwargs["tools"] = [WEB_SEARCH_TOOL]
+
+        response = await self._client.messages.create(**kwargs)
+        return "".join(block.text for block in response.content if getattr(block, "type", "text") == "text")
 
     async def select_panel(self, topic: str, max_members: int | None = None) -> list[Agent]:
         max_members = max_members or self._panel_size

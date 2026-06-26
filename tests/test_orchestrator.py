@@ -49,6 +49,47 @@ async def test_ask_returns_agent_text_and_uses_agent_system_prompt(log_path) -> 
 
 
 @pytest.mark.asyncio
+async def test_ask_attaches_web_search_tool_for_web_search_agents(log_path) -> None:
+    client = make_client()
+    orchestrator = make_orchestrator(client, log_path)
+
+    await orchestrator.ask(AGENTS["cfo"], "What's the official NBU rate today?")
+
+    _, kwargs = client.messages.create.call_args
+    assert kwargs["tools"] == [{"type": "web_search_20250305", "name": "web_search"}]
+
+
+@pytest.mark.asyncio
+async def test_ask_omits_web_search_tool_for_non_web_search_agents(log_path) -> None:
+    client = make_client()
+    orchestrator = make_orchestrator(client, log_path)
+
+    await orchestrator.ask(AGENTS["coo"], "How do we tighten the ops cadence?")
+
+    _, kwargs = client.messages.create.call_args
+    assert "tools" not in kwargs
+
+
+@pytest.mark.asyncio
+async def test_ask_concatenates_only_text_blocks_from_response(log_path) -> None:
+    client = AsyncMock()
+    client.messages.create = AsyncMock(
+        return_value=SimpleNamespace(
+            content=[
+                SimpleNamespace(type="server_tool_use", text="ignored"),
+                SimpleNamespace(type="text", text="hello "),
+                SimpleNamespace(type="text", text="from cfo"),
+            ]
+        )
+    )
+    orchestrator = make_orchestrator(client, log_path)
+
+    result = await orchestrator.ask(AGENTS["cfo"], "What's our runway?")
+
+    assert result == "hello from cfo"
+
+
+@pytest.mark.asyncio
 async def test_ask_includes_history_when_provided(log_path) -> None:
     client = make_client()
     orchestrator = make_orchestrator(client, log_path)
